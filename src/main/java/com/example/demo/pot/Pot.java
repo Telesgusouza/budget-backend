@@ -22,10 +22,10 @@ public class Pot {
 	private String name;
 
 	@Column(nullable = false)
-	private String currentValue;
+	private Float currentValue;
 
 	@Column(nullable = false)
-	private String targetValue;
+	private Float targetValue;
 
 	@Column(nullable = false)
 	private String color;
@@ -33,7 +33,7 @@ public class Pot {
 	public Pot() {
 	}
 
-	public Pot(UUID id, String name, String currentValue, String targetValue, String color) {
+	public Pot(UUID id, String name, Float currentValue, Float targetValue, String color) {
 		super();
 		this.id = id;
 		this.name = name;
@@ -58,19 +58,19 @@ public class Pot {
 		this.name = name;
 	}
 
-	public String getCurrentValue() {
+	public Float getCurrentValue() {
 		return currentValue;
 	}
 
-	public void setCurrentValue(String currentValue) {
+	public void setCurrentValue(Float currentValue) {
 		this.currentValue = currentValue;
 	}
 
-	public String getTargetValue() {
+	public Float getTargetValue() {
 		return targetValue;
 	}
 
-	public void setTargetValue(String targetValue) {
+	public void setTargetValue(Float targetValue) {
 		this.targetValue = targetValue;
 	}
 
