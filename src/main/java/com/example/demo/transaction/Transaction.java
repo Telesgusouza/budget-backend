@@ -4,6 +4,8 @@ import java.time.Instant;
 import java.util.Objects;
 import java.util.UUID;
 
+import com.example.demo.budget.CategoryEnum;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
@@ -13,7 +15,7 @@ import jakarta.persistence.Table;
 
 @Entity(name = "tb_transanction")
 @Table(name = "tb_transanction")
-public class Transanction {
+public class Transaction {
 
 	@Id
 	@GeneratedValue(strategy = GenerationType.AUTO)
@@ -30,14 +32,18 @@ public class Transanction {
 
 	@Column(nullable = false)
 	private Instant date;
+	
+	private CategoryEnum category;
 
-	public Transanction(UUID id, String name, Float value, Boolean transactionStatus, Instant date) {
+	public Transaction(UUID id, String name, Float value, Boolean transactionStatus, Instant date,
+			CategoryEnum category) {
 		super();
 		this.id = id;
 		this.name = name;
 		this.value = value;
 		this.transactionStatus = transactionStatus;
 		this.date = date;
+		this.category = category;
 	}
 
 	public UUID getId() {
@@ -80,10 +86,18 @@ public class Transanction {
 		this.date = date;
 	}
 
+	public CategoryEnum getCategory() {
+		return category;
+	}
+
+	public void setCategory(CategoryEnum category) {
+		this.category = category;
+	}
+
 	@Override
 	public String toString() {
-		return "Transanction [id=" + id + ", name=" + name + ", value=" + value + ", transactionStatus="
-				+ transactionStatus + ", date=" + date + "]";
+		return "Transaction [id=" + id + ", name=" + name + ", value=" + value + ", transactionStatus="
+				+ transactionStatus + ", date=" + date + ", category=" + category + "]";
 	}
 
 	@Override
@@ -99,7 +113,7 @@ public class Transanction {
 			return false;
 		if (getClass() != obj.getClass())
 			return false;
-		Transanction other = (Transanction) obj;
+		Transaction other = (Transaction) obj;
 		return Objects.equals(id, other.id);
 	}
 

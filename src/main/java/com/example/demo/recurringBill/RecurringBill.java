@@ -26,25 +26,17 @@ public class RecurringBill {
 	private Float value;
 
 	@Column(nullable = false)
-	private Instant currentDate;
-
-	@Column(nullable = false)
 	private Instant dueDate;
-
-	@Column(nullable = false)
-	private String color;
 
 	public RecurringBill() {
 	}
 
-	public RecurringBill(UUID id, String name, Float value, Instant currentDate, Instant dueDate, String color) {
+	public RecurringBill(UUID id, String name, Float value, Instant dueDate) {
 		super();
 		this.id = id;
 		this.name = name;
 		this.value = value;
-		this.currentDate = currentDate;
 		this.dueDate = dueDate;
-		this.color = color;
 	}
 
 	public UUID getId() {
@@ -71,14 +63,6 @@ public class RecurringBill {
 		this.value = value;
 	}
 
-	public Instant getCurrentDate() {
-		return currentDate;
-	}
-
-	public void setCurrentDate(Instant currentDate) {
-		this.currentDate = currentDate;
-	}
-
 	public Instant getDueDate() {
 		return dueDate;
 	}
@@ -87,18 +71,9 @@ public class RecurringBill {
 		this.dueDate = dueDate;
 	}
 
-	public String getColor() {
-		return color;
-	}
-
-	public void setColor(String color) {
-		this.color = color;
-	}
-
 	@Override
 	public String toString() {
-		return "RecurringBill [id=" + id + ", name=" + name + ", value=" + value + ", currentDate=" + currentDate
-				+ ", dueDate=" + dueDate + ", color=" + color + "]";
+		return "RecurringBill [id=" + id + ", name=" + name + ", value=" + value + ", dueDate=" + dueDate + "]";
 	}
 
 	@Override
