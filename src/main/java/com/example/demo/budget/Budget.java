@@ -3,11 +3,15 @@ package com.example.demo.budget;
 import java.util.Objects;
 import java.util.UUID;
 
+import com.example.demo.user.User;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 
 @Entity(name = "tb_budget")
@@ -29,6 +33,10 @@ public class Budget {
 
 	@Column(nullable = false)
 	private CategoryEnum category;
+	
+	@ManyToOne
+	@JoinColumn(name = "user_id")
+	private User user;
 
 	public Budget() {
 	}

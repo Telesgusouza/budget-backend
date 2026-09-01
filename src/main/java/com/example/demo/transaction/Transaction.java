@@ -5,12 +5,15 @@ import java.util.Objects;
 import java.util.UUID;
 
 import com.example.demo.budget.CategoryEnum;
+import com.example.demo.user.User;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 
 @Entity(name = "tb_transanction")
@@ -34,7 +37,13 @@ public class Transaction {
 	private Instant date;
 	
 	private CategoryEnum category;
+	
+	@ManyToOne
+	@JoinColumn(name = "user_id")
+	private User user;
 
+	public Transaction() {}
+	
 	public Transaction(UUID id, String name, Float value, Boolean transactionStatus, Instant date,
 			CategoryEnum category) {
 		super();
@@ -92,6 +101,11 @@ public class Transaction {
 
 	public void setCategory(CategoryEnum category) {
 		this.category = category;
+	}
+	
+	
+	public void setUser(User user) {
+		this.user = user;
 	}
 
 	@Override

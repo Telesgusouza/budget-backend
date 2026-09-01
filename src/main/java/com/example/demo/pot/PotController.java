@@ -6,6 +6,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -29,23 +30,23 @@ public class PotController {
 		return ResponseEntity.status(200).body(response);
 	}
 
-	@PatchMapping("/${id}")
-	public ResponseEntity<Void> addOrWithdraw(@RequestBody @Valid addOrWithdrawDTO data, @RequestParam UUID id) {
+	@PatchMapping("/{id}")
+	public ResponseEntity<Void> addOrWithdraw(@RequestBody @Valid addOrWithdrawDTO data, @PathVariable UUID id) {
 
 		this.potService.addOrWithdraw(data, id);
 		return ResponseEntity.status(204).build();
 	}
 
-	@PutMapping("/%{id}")
-	public ResponseEntity<Pot> editPot(@RequestBody @Valid PotDTO data, @RequestParam UUID id) {
+	@PutMapping("/{id}")
+	public ResponseEntity<Pot> editPot(@RequestBody @Valid PotDTO data, @PathVariable UUID id) {
 
 		Pot response = this.potService.editPot(data, id);
 
 		return ResponseEntity.status(200).body(response);
 	}
 
-	@DeleteMapping("/${id}")
-	public ResponseEntity<Void> deletePot(@RequestParam UUID id) {
+	@DeleteMapping("/{id}")
+	public ResponseEntity<Void> deletePot(@PathVariable UUID id) {
 
 		this.potService.deletePot(id);
 		return ResponseEntity.status(204).build();
