@@ -30,7 +30,9 @@ public class RecurringBill {
 	private Float value;
 
 	@Column(nullable = false)
-	private Instant dueDate;
+	private Integer dueDate;
+	
+	private Instant lastBillPaid;
 	
 	@ManyToOne
 	@JoinColumn(name = "user_id")
@@ -39,12 +41,13 @@ public class RecurringBill {
 	public RecurringBill() {
 	}
 
-	public RecurringBill(UUID id, String name, Float value, Instant dueDate) {
+	public RecurringBill(UUID id, String name, Float value, Integer dueDate, Instant lastBillPaid) {
 		super();
 		this.id = id;
 		this.name = name;
 		this.value = value;
 		this.dueDate = dueDate;
+		this.lastBillPaid = lastBillPaid;
 	}
 
 	public UUID getId() {
@@ -71,12 +74,26 @@ public class RecurringBill {
 		this.value = value;
 	}
 
-	public Instant getDueDate() {
+	public Integer getDueDate() {
 		return dueDate;
 	}
 
-	public void setDueDate(Instant dueDate) {
+	public void setDueDate(Integer dueDate) {
 		this.dueDate = dueDate;
+	}
+
+	public void setUser(User user) {
+		this.user = user;
+	}
+	
+	
+
+	public Instant getLastBillPaid() {
+		return lastBillPaid;
+	}
+
+	public void setLastBillPaid(Instant lastBillPaid) {
+		this.lastBillPaid = lastBillPaid;
 	}
 
 	@Override

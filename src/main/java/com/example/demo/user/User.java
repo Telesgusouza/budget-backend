@@ -44,16 +44,16 @@ public class User implements UserDetails {
 	private UserRole role;
 
 	@OneToMany(mappedBy = "user", fetch = FetchType.EAGER)
-	private List<Pot> pots;
+	private List<Pot> pots = new ArrayList();
 	
 	@OneToMany(mappedBy = "user", fetch = FetchType.EAGER)
-	private List<Budget> budgets;
+	private List<Budget> budgets = new ArrayList();
 	
 	@OneToMany(mappedBy = "user", fetch = FetchType.EAGER)
 	private List<Transaction> transactions = new ArrayList();
 	
 	@OneToMany(mappedBy = "user", fetch = FetchType.EAGER)
-	private List<RecurringBill> recurringBills;
+	private List<RecurringBill> recurringBills = new ArrayList();
 	
 	public User() {}
 

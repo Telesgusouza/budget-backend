@@ -33,7 +33,7 @@ public class Pot {
 
 	@Column(nullable = false)
 	private String color;
-	
+
 	@ManyToOne
 	@JoinColumn(name = "user_id")
 	private User user;
@@ -88,6 +88,10 @@ public class Pot {
 
 	public void setColor(String color) {
 		this.color = color;
+	}
+
+	public void setUser(User user) {
+		this.user = user;
 	}
 
 	@Override
