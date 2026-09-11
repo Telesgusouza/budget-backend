@@ -3,6 +3,7 @@ package com.example.demo.transaction;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.UUID;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -27,7 +28,6 @@ public class TransactionService {
 
 	// ATENÇÃO ler arquivo
 	
-	@Transactional
 	public Page<Transaction> getTransactionsPageable(Pageable pageable) {
 		
 		return this.transactionRepository.findAll(pageable);
@@ -58,7 +58,7 @@ public class TransactionService {
 		return list;
 	}
 
-	public Transaction addNewTransaction(AddTransactionDTO data, User user) {
+	public Transaction addNewTransaction(TransactionDTO data, User user) {
 		
 		Instant currentTime = Instant.now();
 
@@ -73,6 +73,40 @@ public class TransactionService {
 		this.userRepository.save(user);
 
 		return save;
+	}
+	
+	public void editTransaction(TransactionDTO data, UUID id) {
+		
+		Transaction requestTransaction = this.transactionRepository.findById(id).orElseThrow(() -> new RuntimeException("Transaction not found"));
+
+		boolean changed = false;
+		
+		if (!Objects.equals(data.name(), requestTransaction.getName())) {
+			requestTransaction.setName(data.name());
+			changed = true;
+		}
+		
+		if (!Objects.equals(data.category(), requestTransaction.getCategory())) {
+			requestTransaction.setCategory(data.category());
+			changed = true;
+		}
+		
+		if (!Objects.equals(data.value(), requestTransaction.getValue())) {
+			requestTransaction.setValue(data.value());
+			changed = true;
+		}
+		
+		if (!Objects.equals(data.statusValue(), requestTransaction.getTransactionStatus())) {
+			requestTransaction.setTransactionStatus(data.statusValue());
+			changed = true;
+		}
+		
+		if (!changed) {
+			throw new RuntimeException("There are no changes to be made.");
+		}
+		
+		this.transactionRepository.save(requestTransaction);
+		
 	}
 
 	public void deleteTransaction(UUID id) {

@@ -26,7 +26,7 @@ public class Budget {
 	private Float valueSpent;
 
 	@Column(nullable = false)
-	private Float valueRemaining;
+	private Float budget;
 
 	@Column(nullable = false)
 	private String color;
@@ -41,11 +41,11 @@ public class Budget {
 	public Budget() {
 	}
 
-	public Budget(UUID id, Float valueSpent, Float valueRemaining, String color, CategoryEnum category) {
+	public Budget(UUID id, Float valueSpent, Float budget, String color, CategoryEnum category) {
 		super();
 		this.id = id;
 		this.valueSpent = valueSpent;
-		this.valueRemaining = valueRemaining;
+		this.budget = budget;
 		this.color = color;
 		this.category = category;
 	}
@@ -66,12 +66,12 @@ public class Budget {
 		this.valueSpent = valueSpent;
 	}
 
-	public Float getValueRemaining() {
-		return valueRemaining;
+	public Float getBudget() {
+		return budget;
 	}
 
-	public void setValueRemaining(Float valueRemaining) {
-		this.valueRemaining = valueRemaining;
+	public void setBudget(Float budget) {
+		this.budget = budget;
 	}
 
 	public String getColor() {
@@ -89,10 +89,14 @@ public class Budget {
 	public void setCategory(CategoryEnum category) {
 		this.category = category;
 	}
+	
+	public void setUser(User user) {
+		this.user = user;
+	}
 
 	@Override
 	public String toString() {
-		return "Budget [id=" + id + ", valueSpent=" + valueSpent + ", valueRemaining=" + valueRemaining + ", color="
+		return "Budget [id=" + id + ", valueSpent=" + valueSpent + ", budget=" + budget + ", color="
 				+ color + ", category=" + category + "]";
 	}
 

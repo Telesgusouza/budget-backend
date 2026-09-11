@@ -15,30 +15,6 @@ import org.springframework.web.bind.annotation.GetMapping;
 import com.example.demo.user.User;
 import com.example.demo.user.UserRepository;
 
-/*
- 
-  
-  preciso fazer a paginação, a entidade usuario pode ter varios pots, enquanto o pot pode ter apenas um usuario, preciso adicionar uma requisição
-  get que faça a paginação dos pots do usuario
-  
-  	@GetMapping
-	public ResponseEntity<Page<Pot>> getPotForPagination(Pageable pageable) {
-		
-		Page<Pot> response = this.potService.getPotForPagination(pageable);
-		
-		return ResponseEntity.ok().body(response);
-	}
-  
-  	public Page<Pot> getPotForPagination(Pageable pageable) {
-
-		Page<Pot> request = this.repo.findAll(pageable);
-
-		return this.repo.findAll(pageable);
-	}
-  
-  
- */
-
 @Service
 public class PotService {
 
@@ -55,13 +31,6 @@ public class PotService {
 		return this.repo.findAll(pageable);
 	}
 
-//	public Page<Pot> getPotForPagination(Pageable pageable) {
-//		
-//		Page<Pot> request = this.repo.findAll(pageable);
-//		
-//		return this.repo.findAll(pageable);
-//	}
-
 	public ResponsePotHomeDTO getForHome(User user) {
 
 		List<Pot> pots = user.getPots();
@@ -74,7 +43,7 @@ public class PotService {
 		for (Pot pot : pots) {
 			total += pot.getCurrentValue();
 
-			if (count <= 4) {
+			if (count <= 3) {
 				list.add(new PotHomeDTO(pot.getName(), pot.getCurrentValue(), pot.getColor()));
 				count++;
 			}
