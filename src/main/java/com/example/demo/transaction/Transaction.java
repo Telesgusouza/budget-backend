@@ -44,14 +44,14 @@ public class Transaction {
 
 	public Transaction() {}
 	
-	public Transaction(UUID id, String name, Float value, Boolean transactionStatus, Instant date,
+	public Transaction(UUID id, String name, Float value, Boolean transactionStatus, Instant dateFormat,
 			CategoryEnum category) {
 		super();
 		this.id = id;
 		this.name = name;
 		this.value = value;
 		this.transactionStatus = transactionStatus;
-		this.date = date;
+		this.date = dateFormat;
 		this.category = category;
 	}
 

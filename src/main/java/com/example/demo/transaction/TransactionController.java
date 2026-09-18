@@ -16,8 +16,11 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 
+import com.example.demo.budget.CategoryEnum;
 import com.example.demo.user.User;
 
 import jakarta.validation.Valid;
@@ -66,6 +69,20 @@ public class TransactionController {
 
 		this.transactionsService.deleteTransaction(id);
 		return ResponseEntity.noContent().build();
+	}
+
+	@PostMapping("/proofOfPayment/{status}/{category}")
+	public ResponseEntity<Transaction> extractFromProofOfPayment(@RequestParam("file") MultipartFile file,
+
+			@PathVariable boolean status, @PathVariable CategoryEnum category,
+
+			@AuthenticationPrincipal User user) throws Exception {
+
+		otherPaymentReceiptDetailsDTO data = new otherPaymentReceiptDetailsDTO(status, category);
+
+		Transaction response = this.transactionsService.extract(file, data, user);
+
+		return ResponseEntity.ok().body(response);
 	}
 
 }
