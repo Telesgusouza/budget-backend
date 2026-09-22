@@ -45,10 +45,6 @@ public class TransactionService {
 			return extractPDF(file, data, user);
 		} else {
 
-//			String fullText = callOcrSpace(file);
-//			return parseText(fullText);
-
-//			return "daqui a pouco leremos image";
 			return null;
 		}
 	}
@@ -61,12 +57,15 @@ public class TransactionService {
 		String textExtracted = stripper.getText(document);
 
 		textExtracted = textExtracted.replaceAll("\\s+", " ").trim();
+		
 		String isPicpay = extractWithRegex(textExtracted, "PICPAY ID da transação", 0);
-
-		if (isPicpay != "") {
+		if (isPicpay != "") 
 			return extractPicpay(textExtracted, data, user);
-		}
-
+		
+		String isBradesco = extractWithRegex(textExtracted, "Transação concluída pelo BRADESCO", 0);
+		if (isBradesco != "")  
+			return extractBradesco(textExtracted, data, user);
+		
 		return null;
 	}
 
@@ -98,6 +97,86 @@ public class TransactionService {
 
 		return save;
 	}
+	
+	private Transaction extractBradesco(String text, otherPaymentReceiptDetailsDTO data, User user) {
+		
+		text = text.replaceAll("\\s+", " ").trim();
+		
+		String destinationName = extractWithRegex(
+				text,
+				"DADOS DE QUEM VAI RECEBER\\s+Nome:\\s*([^\\n]+?)\\s+CPF",
+				1
+				);
+		
+		String extractValue = extractWithRegex(
+				text,
+				"DADOS DO PAGAMENTO\\s+Valor:\\s*([^\\n]+?)\\s+Data",
+				1
+				);
+		Float value = Float.parseFloat(extractValue.replace("R$ ", " ").replace(".", "").replace(",", "."));
+		
+		String extractDate = extractWithRegex(
+			    text,
+			    "Data e Hora:\\s+(\\d{2}/\\d{2}/\\d{4})\\s+-",
+			    1
+			);
+		Instant date = formatDate(extractDate);
+		
+		Transaction transaction = new Transaction(null, destinationName, value, data.statusTransaction(), date, data.category());
+		transaction.setUser(user);
+		Transaction saved = this.transactionRepository.save(transaction);
+		user.getTransactions().add(saved);
+		this.userRepository.save(user);
+		
+		return saved;
+	}
+	
+	/*
+	 
+	  
+	 */
+	
+	/*
+	 
+	 agora estava tentando pegar a apenas a data, porém estava tendo dificuldades, no meu resultado ele retornou nada
+	 no caso a data é 12/09/2025
+	 
+	 Recomendamos a impressão desse Comprovante Para tanto, utilize a opção da impressão de seu dispositivo Comprovante de Agendamento Pix 
+	 Data e Hora: 12/09/2025 - 17:31:15 Número de Controle: E60746948202509122030A0619t0iZIE Dados de quem pagou Nome: RAIMUNDO TELES DE SOUSA 
+	 CPF: ***.278.025-** Instituição: Bradesco S/A DADOS DO PAGAMENTO Valor: R$ 10.000,00 Data e Hora: 15/09/2025 Debitar da: Conta-Corrente 
+	 DADOS DE QUEM VAI RECEBER Nome: VALDIR JOSE GOMES CPF ***.610.345-** Instituição: BCO DO BRASIL S.A. Chave: 31461034515 Transação 
+	 concluída pelo BRADESCO CELULAR
+
+	private Transaction extractBradesco(String text, otherPaymentReceiptDetailsDTO data, User user) {
+		
+		text = text.replaceAll("\\s+", " ").trim();
+		
+		String destinationName = extractWithRegex(
+				text,
+				"DADOS DE QUEM VAI RECEBER\\s+Nome:\\s*([^\\n]+?)\\s+CPF",
+				1
+				);
+		
+		String extractValue = extractWithRegex(
+				text,
+				"DADOS DO PAGAMENTO\\s+Valor:\\s*([^\\n]+?)\\s+Data",
+				1
+				);
+		
+		String date = extractWithRegex(text, "Data e Hora: \\s+(\\d{2}/d{2}/\\d{4})\\s+-", 1);
+		
+		Float value = Float.parseFloat(extractValue.replace("R$ ", " ").replace(".", "").replace(",", "."));
+		
+		
+		System.out.println();
+		
+		System.out.println("==========================");
+		System.out.println(date);
+		
+		System.out.println();
+	 
+	 
+	 */
 
 	private String extractWithRegex(String text, String regex, Integer group) {
 
