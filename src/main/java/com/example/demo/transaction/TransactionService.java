@@ -1,5 +1,6 @@
 package com.example.demo.transaction;
 
+import java.awt.image.BufferedImage;
 import java.io.IOException;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -13,6 +14,8 @@ import java.util.UUID;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import javax.imageio.ImageIO;
+
 import org.apache.pdfbox.Loader;
 import org.apache.pdfbox.io.RandomAccessReadBuffer;
 import org.apache.pdfbox.pdmodel.PDDocument;
@@ -25,6 +28,9 @@ import org.springframework.web.multipart.MultipartFile;
 
 import com.example.demo.user.User;
 import com.example.demo.user.UserRepository;
+
+import net.sourceforge.tess4j.Tesseract;
+import net.sourceforge.tess4j.TesseractException;
 
 @Service
 public class TransactionService {
@@ -42,14 +48,42 @@ public class TransactionService {
 		String filename = file.getOriginalFilename();
 
 		if (filename.toLowerCase().endsWith(".pdf")) {
-			return extractPDF(file, data, user);
+			
+			KeyDetailsOfThePaymentReceiptDTO extractionOfProof = extractPDF(file, data, user);
+			
+			Transaction transaction = new Transaction(
+					null, 
+					extractionOfProof.name(), 
+					extractionOfProof.value(),
+					data.statusTransaction(), 
+					extractionOfProof.date(), 
+					data.category());
+			
+			Transaction response = saveTransaction(transaction, user);
+			
+			return response;
 		} else {
 
+			KeyDetailsOfThePaymentReceiptDTO extractionOfProof =  extractImage(file);
+
+//			Transaction transaction = new Transaction(
+//					null, 
+//					extractionOfProof.name(), 
+//					extractionOfProof.value(),
+//					data.statusTransaction(), 
+//					extractionOfProof.date(), 
+//					data.category());
+//			
+//			Transaction response = saveTransaction(transaction, user);
+//			
+//			return response;
+			
 			return null;
+			
 		}
 	}
 
-	public Transaction extractPDF(MultipartFile file, otherPaymentReceiptDetailsDTO data, User user)
+	public KeyDetailsOfThePaymentReceiptDTO extractPDF(MultipartFile file, otherPaymentReceiptDetailsDTO data, User user)
 			throws IOException {
 
 		PDDocument document = Loader.loadPDF(new RandomAccessReadBuffer(file.getInputStream()));
@@ -57,19 +91,191 @@ public class TransactionService {
 		String textExtracted = stripper.getText(document);
 
 		textExtracted = textExtracted.replaceAll("\\s+", " ").trim();
-		
+
 		String isPicpay = extractWithRegex(textExtracted, "PICPAY ID da transação", 0);
-		if (isPicpay != "") 
-			return extractPicpay(textExtracted, data, user);
-		
+		if (isPicpay != "")
+			return extractPicpay(textExtracted);
+
 		String isBradesco = extractWithRegex(textExtracted, "Transação concluída pelo BRADESCO", 0);
-		if (isBradesco != "")  
-			return extractBradesco(textExtracted, data, user);
-		
+		if (isBradesco != "")
+			return extractBradesco(textExtracted);
+
 		return null;
 	}
 
-	private Transaction extractPicpay(String text, otherPaymentReceiptDetailsDTO data, User user) {
+	public KeyDetailsOfThePaymentReceiptDTO extractImage(MultipartFile file) {
+
+		try {
+
+			Tesseract tesseract = new Tesseract();
+
+			tesseract.setDatapath("/usr/share/tesseract-ocr/4.00/tessdata");
+			tesseract.setLanguage("por");
+
+			BufferedImage image = ImageIO.read(file.getInputStream());
+			String text = tesseract.doOCR(image);
+			
+			text = text.replaceAll("\\s+", " ").trim();
+//			
+//			System.out.println();
+//			System.out.println();
+//			
+//			System.out.println("========================");
+//			System.out.println(text);
+//			
+//			System.out.println();
+//			System.out.println();
+			
+			String isNubank = extractWithRegex(text, "nubank.com.br/contatostouvidoria", 0);
+			String is99Pay = extractWithRegex(text, "Detalhes do remetente Instituição 99Pay", 0);
+			String isC6Bank = extractWithRegex(text, "C6bsN« Pix em Pix andamento realizado", 0);
+			String isSantander = extractWithRegex(text, "Santander Comprovante do pagamento ", 0);
+			String isUber = extractWithRegex(text, "Uber Conta | »digio ", 0);
+			
+			if (isNubank != "") {
+				return extractNubank(text);
+			} else if (is99Pay != "") {
+				return extract99Pay(text);
+			} else if (isC6Bank != "") {
+				return extractC6Bank(text);
+			} else if (isSantander != "") {
+				return extractSantander(text);
+			} else if (isUber != "") {
+				return extractUber(text);
+			}
+			
+
+
+			return null;
+		} catch (Exception e) {
+			// TODO: handle exception
+		}
+
+		return null;
+
+	}
+	
+	private KeyDetailsOfThePaymentReceiptDTO extractNubank(String text) {
+		
+		String destinationName = extractWithRegex(text, "Destino\\s+Nome\\s+([A-Za-zÀ-ÿ\\s]+?)\\s+CPF", 1);
+
+		String extractValue = extractWithRegex(text, "Valor\\s+(R\\$\\s?\\d{1,3}(?:\\.\\d{3})*,\\d{2})", 1)
+				.replace("R$", "")
+				.replace(",", ".");
+		String extractDate = extractWithRegex(text, "(\\d{2}\\s+[A-Z]{3}\\s+\\d{4})", 1)
+				.replace(" ", "/");
+		Instant date = formatDate(extractDate);
+		Float value = Float.parseFloat(extractValue);
+		
+		KeyDetailsOfThePaymentReceiptDTO response = new KeyDetailsOfThePaymentReceiptDTO(destinationName, value, date);
+		
+		return response;
+	}
+	
+	private KeyDetailsOfThePaymentReceiptDTO extract99Pay(String text){
+		
+		String name = extractWithRegex(text, "Transferir\\s+para\\s+([A-Za-zÀ-ÿ\\s]+?)\\s+Data", 1);
+		
+		String extractValue = extractWithRegex(text, "concluída\\s+LR\\s+(R\\$\\s?\\d{1,3}(?:\\.\\d{3})*,\\d{2})", 1)
+				.replace("R$", "")
+				.replace(",", ".");
+		String extractDate = extractWithRegex(text, "Data\\s+de\\s+pagamento\\s+(\\d{2}/\\d{2}/\\d{2})", 1);
+		extractDate = extractDate.replaceAll("(\\d{2}/\\d{2}/)(\\d{2})", "$120$2");
+		
+		Float value = Float.parseFloat(extractValue);
+		Instant date = this.formatDate(extractDate);
+		
+		KeyDetailsOfThePaymentReceiptDTO response = new KeyDetailsOfThePaymentReceiptDTO(name, value, date);
+		
+		return response;
+	}
+	
+	private KeyDetailsOfThePaymentReceiptDTO extractC6Bank(String text){
+		String name = extractWithRegex(text, "es\\s+([A-Za-zÀ-ÿ\\s]+?)\\s+Banco", 1);
+
+		String extractValue = extractWithRegex(text, "Valor\\s+(R\\$\\s?\\d{1,3}(?:\\.\\d{3})*,\\d{2})", 1)
+				.replace("R$", "")
+				.replace(",", ".");
+		String extractDate = extractWithRegex(text, "andamento\\s+realizado!\\s+(\\d{2}/\\d{2}/\\d{4})", 1);
+		
+		Float value = Float.parseFloat(extractValue);
+		Instant date = formatDate(extractDate);
+		
+		KeyDetailsOfThePaymentReceiptDTO response = new KeyDetailsOfThePaymentReceiptDTO(name, value, date);
+
+		return response;
+	}
+	
+	private KeyDetailsOfThePaymentReceiptDTO extractSantander(String text){
+		
+		String name = extractWithRegex(text, " Dados\\s+do\\s+recebedor\\s+Para\\s+([A-Za-zÀ-ÿ\\s]+?)\\s+CPF", 1);
+		String extractValue = extractWithRegex(text, "Valor\\s+pago\\s+(R\\$\\s?\\d{1,3}(?:\\.\\d{3})*,\\d{2})", 1)
+				.replace("R$", "")
+				.replace(",", ".");
+		String extractDate = extractWithRegex(text, "Comprovante\\s+do\\s+pagamento\\s+(\\d{2}/\\d{2}/\\d{4})", 1);
+		
+		Float value = Float.parseFloat(extractValue);
+		Instant date = formatDate(extractDate);
+		
+		KeyDetailsOfThePaymentReceiptDTO response = new KeyDetailsOfThePaymentReceiptDTO(name, value, date);
+		
+		return response;
+	}
+	
+	
+
+	
+	
+	private KeyDetailsOfThePaymentReceiptDTO extractUber(String text){
+	
+		String name = extractWithRegex(text, "QUEM\\s+RECEBEU\\s+Nome\\s+([A-Za-zÀ-ÿ\\s]+?)\\s+CPF", 1);
+		
+		if (name == "") {
+			// CNPJ
+			name = extractWithRegex(text, "QUEM\\s+RECEBEU\\s+Nome\\s+([A-Za-zÀ-ÿ\\s]+?)\\s+CNPJ", 1);
+		}
+		
+		String extractValue = extractWithRegex(text, "Valor\\s+(R\\$\\s?\\d{1,3}(?:\\.\\d{3})*,\\d{2})", 1)
+				.replace("R$", "")
+				.replace(",", ".");
+		
+		String extractDate = extractWithRegex(text, "Transferido\\s+em\\s+(\\d{2}/\\d{2}/\\d{4})", 1);
+		
+		// date
+		
+		
+		Float value = Float.parseFloat(extractValue);
+		
+		System.out.println();
+		System.out.println();
+		
+		System.out.println("===================");
+		System.out.println(extractDate);
+		
+		System.out.println();
+		System.out.println();
+		
+		return null;
+	}
+	
+	/*
+		 
+	 X Q Uber Conta | »digio Comprovante de transferência SOBRE A TRANSAÇÃO Transferido em 16/09/2026 às 11:34 
+	 Valor R$ 4,00 Chave Pix Chave Pix não utilizada Código da transação a E27098060202609161434wfnBTC6mgGKkK 
+	 QUEM PAGOU Nome GUSTAVO TELES DE SOUZA CPF ++ 0953.828-*+ Instituição Banco Digio 
+	 QUEM RECEBEU Nome ACOUGUE JANGADEIRO LTDA CNPJ 62.000.666/0001-05 Instituição Itaú Unibanco S.A. 
+	 Banco Digio S.A. 27098.060/0001-45 www.digio.com.br
+
+	 
+	 
+	*/
+	
+	
+	
+	
+	private KeyDetailsOfThePaymentReceiptDTO extractPicpay(
+			String text 
+			) {
 
 		text = text.replaceAll("\\s+", " ").trim();
 
@@ -86,97 +292,28 @@ public class TransactionService {
 
 		String value = extractWithRegex(text, "Valor (R\\$\\s*\\d{1,3}(\\.\\d{3})*,\\d{2})", 1);
 		String valueFormat = value.replace("R$ ", "").replace(",", ".");
-
-		Transaction transaction = new Transaction(null, destinationName, Float.parseFloat(valueFormat),
-				data.statusTransaction(), dateFormat, data.category());
-		transaction.setUser(user);
-
-		Transaction save = this.transactionRepository.save(transaction);
-		user.getTransactions().add(save);
-		this.userRepository.save(user);
-
-		return save;
+		
+		KeyDetailsOfThePaymentReceiptDTO response = new KeyDetailsOfThePaymentReceiptDTO(destinationName, Float.parseFloat(valueFormat), dateFormat);
+		
+		return response;
 	}
-	
-	private Transaction extractBradesco(String text, otherPaymentReceiptDetailsDTO data, User user) {
-		
+
+	private KeyDetailsOfThePaymentReceiptDTO extractBradesco(String text) {
+
 		text = text.replaceAll("\\s+", " ").trim();
-		
-		String destinationName = extractWithRegex(
-				text,
-				"DADOS DE QUEM VAI RECEBER\\s+Nome:\\s*([^\\n]+?)\\s+CPF",
-				1
-				);
-		
-		String extractValue = extractWithRegex(
-				text,
-				"DADOS DO PAGAMENTO\\s+Valor:\\s*([^\\n]+?)\\s+Data",
-				1
-				);
+
+		String destinationName = extractWithRegex(text, "DADOS DE QUEM VAI RECEBER\\s+Nome:\\s*([^\\n]+?)\\s+CPF", 1);
+
+		String extractValue = extractWithRegex(text, "DADOS DO PAGAMENTO\\s+Valor:\\s*([^\\n]+?)\\s+Data", 1);
 		Float value = Float.parseFloat(extractValue.replace("R$ ", " ").replace(".", "").replace(",", "."));
-		
-		String extractDate = extractWithRegex(
-			    text,
-			    "Data e Hora:\\s+(\\d{2}/\\d{2}/\\d{4})\\s+-",
-			    1
-			);
+
+		String extractDate = extractWithRegex(text, "Data e Hora:\\s+(\\d{2}/\\d{2}/\\d{4})\\s+-", 1);
 		Instant date = formatDate(extractDate);
 		
-		Transaction transaction = new Transaction(null, destinationName, value, data.statusTransaction(), date, data.category());
-		transaction.setUser(user);
-		Transaction saved = this.transactionRepository.save(transaction);
-		user.getTransactions().add(saved);
-		this.userRepository.save(user);
-		
-		return saved;
-	}
-	
-	/*
-	 
-	  
-	 */
-	
-	/*
-	 
-	 agora estava tentando pegar a apenas a data, porém estava tendo dificuldades, no meu resultado ele retornou nada
-	 no caso a data é 12/09/2025
-	 
-	 Recomendamos a impressão desse Comprovante Para tanto, utilize a opção da impressão de seu dispositivo Comprovante de Agendamento Pix 
-	 Data e Hora: 12/09/2025 - 17:31:15 Número de Controle: E60746948202509122030A0619t0iZIE Dados de quem pagou Nome: RAIMUNDO TELES DE SOUSA 
-	 CPF: ***.278.025-** Instituição: Bradesco S/A DADOS DO PAGAMENTO Valor: R$ 10.000,00 Data e Hora: 15/09/2025 Debitar da: Conta-Corrente 
-	 DADOS DE QUEM VAI RECEBER Nome: VALDIR JOSE GOMES CPF ***.610.345-** Instituição: BCO DO BRASIL S.A. Chave: 31461034515 Transação 
-	 concluída pelo BRADESCO CELULAR
+		KeyDetailsOfThePaymentReceiptDTO response = new KeyDetailsOfThePaymentReceiptDTO(destinationName, value, date);
 
-	private Transaction extractBradesco(String text, otherPaymentReceiptDetailsDTO data, User user) {
-		
-		text = text.replaceAll("\\s+", " ").trim();
-		
-		String destinationName = extractWithRegex(
-				text,
-				"DADOS DE QUEM VAI RECEBER\\s+Nome:\\s*([^\\n]+?)\\s+CPF",
-				1
-				);
-		
-		String extractValue = extractWithRegex(
-				text,
-				"DADOS DO PAGAMENTO\\s+Valor:\\s*([^\\n]+?)\\s+Data",
-				1
-				);
-		
-		String date = extractWithRegex(text, "Data e Hora: \\s+(\\d{2}/d{2}/\\d{4})\\s+-", 1);
-		
-		Float value = Float.parseFloat(extractValue.replace("R$ ", " ").replace(".", "").replace(",", "."));
-		
-		
-		System.out.println();
-		
-		System.out.println("==========================");
-		System.out.println(date);
-		
-		System.out.println();
-	 
-	 
-	 */
+		return response;
+	}
 
 	private String extractWithRegex(String text, String regex, Integer group) {
 
@@ -204,6 +341,16 @@ public class TransactionService {
 		DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy", Locale.forLanguageTag("pt-BR"));
 		LocalDate localDate = LocalDate.parse(date, formatter);
 		return localDate.atStartOfDay(ZoneId.systemDefault()).toInstant();
+	}
+		
+	private Transaction saveTransaction(Transaction transaction, User user) {
+		transaction.setUser(user);
+		
+		Transaction response = this.transactionRepository.save(transaction);
+		user.getTransactions().add(response);
+		this.userRepository.save(user);
+		
+		return response;
 	}
 
 	//
