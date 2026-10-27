@@ -7,6 +7,7 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import com.example.demo.config.TokenService;
+import com.example.demo.exceptions.ResourceNotFoundException;
 
 @Service
 public class UserService {
@@ -35,7 +36,7 @@ public class UserService {
 	public ResponseAccessAccountDTO register(RegisterDTO data) {
 
 		if (this.userRepository.findByLogin(data.login()) != null)
-			throw new RuntimeException("Failed to register");
+			throw new ResourceNotFoundException("Failed to register");
 
 		String encryptedPassword = new BCryptPasswordEncoder().encode(data.password());
 		User newUser = new User(null, data.login(), encryptedPassword, data.role());

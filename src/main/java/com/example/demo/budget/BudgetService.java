@@ -8,8 +8,12 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.DataAccessException;
 import org.springframework.stereotype.Service;
 
+import com.example.demo.exceptions.AuthenticationRequiredOrFailed;
+import com.example.demo.exceptions.InvalidFieldException;
+import com.example.demo.exceptions.ResourceNotFoundException;
 import com.example.demo.transaction.Transaction;
 import com.example.demo.transaction.TransactionRepository;
 import com.example.demo.user.User;
@@ -23,6 +27,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+import jakarta.transaction.Transactional;
 
 @Service
 public class BudgetService {
@@ -36,10 +41,12 @@ public class BudgetService {
 	@Autowired
 	private UserRepository userRepository;
 	
-	
-	
 	public List<BudgetWithTransactionsDTO> getBudgets(UUID userId) {
 	       List<Budget> budgets = budgetRepository.findByUserId(userId);
+	       
+	       if (budgets == null) {
+	    	   throw new AuthenticationRequiredOrFailed("User not found");
+	       }
 
 	       List<BudgetWithTransactionsDTO> response = budgets.stream().map(budget -> {
 	            List<Transaction> transactions = transactionRepository
@@ -59,8 +66,6 @@ public class BudgetService {
 	       
 	       return response;
 	}
-	
-	
 	
 	public ResponseHomeBudgetDTO getHome(User user) {
 		
@@ -87,49 +92,139 @@ public class BudgetService {
 		return new ResponseHomeBudgetDTO(totalSpent, totalBudget, list);
 	}
 	
-
+	@Transactional
 	public Budget newBudget(BudgetDTO data, User user) {
 
-		Budget newBudget = new Budget(null, 0.0f, data.maximumSpend(),  data.color(), data.category());
-		newBudget.setUser(user);
-		Budget response = this.budgetRepository.save(newBudget);
-		
-		user.getBudgets().add(response);
-		userRepository.save(user);
+	    if (data == null) {
+	        throw new InvalidFieldException("Budget data cannot be null.");
+	    }
 
-		return response;
+	    if (user == null) {
+	        throw new AuthenticationRequiredOrFailed("User not found.");
+	    }
+
+	    if (data.maximumSpend() == null || data.maximumSpend() <= 0) {
+	        throw new InvalidFieldException("The maximum value must be greater than zero.");
+	    }
+
+	    if (data.category() == null) {
+	        throw new InvalidFieldException("Mandatory category.");
+	    }
+
+	    if (data.color() == null || data.color().isBlank()) {
+	        throw new InvalidFieldException("Mandatory color.");
+	    }
+
+	    if (budgetRepository.existsByUserAndCategory(user, data.category())) {
+	        throw new InvalidFieldException(
+	            "There is already a budget for this category."
+	        );
+	    }
+
+	    try {
+
+	        Budget budget = new Budget(
+	                null,
+	                0.0f,
+	                data.maximumSpend(),
+	                data.color(),
+	                data.category()
+	        );
+
+	        budget.setUser(user);
+
+	        Budget savedBudget = budgetRepository.save(budget);
+
+	        if (user.getBudgets() == null) {
+	            user.setBudgets(new ArrayList<>());
+	        }
+
+	        user.getBudgets().add(savedBudget);
+
+	        userRepository.save(user);
+
+	        return savedBudget;
+
+	    } catch (DataAccessException e) {
+	        throw new ResourceNotFoundException(
+	            "Internal error while creating a quote." +
+	            e
+	        );
+	    }
 	}
-
+		
+	@Transactional
 	public void editBudget(BudgetDTO data, UUID id) {
 
-		Budget request = this.budgetRepository.findById(id).orElseThrow(() -> new RuntimeException("Budget not found"));
+	    if (data == null) {
+	        throw new InvalidFieldException("Budget data cannot be null.");
+	    }
 
-		boolean changed = false;
+	    if (id == null) {
+	        throw new InvalidFieldException("Budget id cannot be null.");
+	    }
 
-		if (!Objects.equals(data.category(), request.getCategory())) {
-			request.setCategory(data.category());
-			changed = true;
-		}
+	    if (data.category() == null) {
+	        throw new InvalidFieldException("Mandatory category.");
+	    }
 
-		if (!Objects.equals(data.maximumSpend(), request.getValueSpent())) {
-			request.setValueSpent(data.maximumSpend());
-			changed = true;
-		}
+	    if (data.maximumSpend() == null || data.maximumSpend() <= 0) {
+	        throw new InvalidFieldException(
+	                "The maximum value must be greater than zero.");
+	    }
 
-		if (!Objects.equals(data.color(), request.getColor())) {
-			request.setColor(data.color());
-			changed = true;
-		}
+	    if (data.color() == null || data.color().isBlank()) {
+	        throw new InvalidFieldException("Mandatory color.");
+	    }
 
-		if (!changed) {
-			throw new RuntimeException("There are no changes to be made.");
-		}
-		
-		this.budgetRepository.save(request);
-	};
+	    Budget request = budgetRepository.findById(id)
+	            .orElseThrow(() ->
+	                    new ResourceNotFoundException(
+	                            "Budget not found"));
+
+	    if (!Objects.equals(data.category(), request.getCategory())
+	            && budgetRepository.existsByUserAndCategory(
+	                    request.getUser(),
+	                    data.category())) {
+
+	        throw new InvalidFieldException(
+	                "There is already a budget for this category.");
+	    }
+
+	    boolean changed = false;
+
+	    if (!Objects.equals(data.category(), request.getCategory())) {
+	        request.setCategory(data.category());
+	        changed = true;
+	    }
+
+	    if (!Objects.equals(data.maximumSpend(), request.getValueSpent())) {
+	        request.setValueSpent(data.maximumSpend());
+	        changed = true;
+	    }
+
+	    if (!Objects.equals(data.color(), request.getColor())) {
+	        request.setColor(data.color());
+	        changed = true;
+	    }
+
+	    if (!changed) {
+	        throw new InvalidFieldException(
+	                "There are no changes to be made.");
+	    }
+
+	    try {
+	        budgetRepository.save(request);
+	    } catch (DataAccessException e) {
+	        throw new ResourceNotFoundException(
+	                "Internal error while updating budget.");
+	    }
+	}
 
 	public void deleteBudget(UUID id) {
-		Budget request = this.budgetRepository.findById(id).orElseThrow(() -> new RuntimeException("Budget not found"));
+		Budget request = this.budgetRepository.findById(id)
+				.orElseThrow(() ->
+				new ResourceNotFoundException("Budget not found"));
 		this.budgetRepository.delete(request);
 	}
 

@@ -4,6 +4,7 @@ import java.util.Objects;
 import java.util.UUID;
 
 import com.example.demo.user.User;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -35,6 +36,7 @@ public class Budget {
 	private CategoryEnum category;
 	
 	@ManyToOne
+	@JsonIgnore
 	@JoinColumn(name = "user_id")
 	private User user;
 
@@ -92,6 +94,10 @@ public class Budget {
 	
 	public void setUser(User user) {
 		this.user = user;
+	}
+	
+	public User getUser() {
+		return user;
 	}
 
 	@Override

@@ -9,6 +9,7 @@ import org.springframework.stereotype.Service;
 
 import com.auth0.jwt.JWT;
 import com.auth0.jwt.algorithms.Algorithm;
+import com.example.demo.exceptions.TokenException;
 import com.example.demo.user.User;
 
 @Service
@@ -31,7 +32,7 @@ public class TokenService {
 			return token;
 			
 		} catch (Exception e) {
-			throw new RuntimeException("Error while generating token ", e);
+			throw new TokenException("Error while generating token " + e);
 		}
 		
 	}
